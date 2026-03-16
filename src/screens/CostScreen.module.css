@@ -1,0 +1,292 @@
+.container {
+  min-height: 100vh;
+  background: #0f1923;
+  color: #e2e8f0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Header ─── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 40px 20px 16px;
+  background: #131f2e;
+  border-bottom: 1px solid #1e2d3d;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ff9900;
+  margin: 0;
+}
+
+.backBtn2 {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 0;
+  transition: color 0.2s;
+}
+
+.backBtn2:hover {
+  color: #ff9900;
+}
+
+.iconBtn {
+  background: #1e2d3d;
+  border: 1px solid #2d3f50;
+  border-radius: 6px;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.iconBtn:hover:not(:disabled) {
+  background: #2d3f50;
+  color: #e2e8f0;
+}
+
+.iconBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ─── Content ─── */
+.content {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* ─── Total Card ─── */
+.totalCard {
+  background: linear-gradient(135deg, #1a2a1a 0%, #131f2e 100%);
+  border: 1px solid rgba(255, 153, 0, 0.3);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+}
+
+.totalLabel {
+  font-size: 12px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.totalAmount {
+  font-size: 36px;
+  font-weight: 700;
+  color: #ff9900;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.totalUnit {
+  font-size: 14px;
+  color: #94a3b8;
+  margin-left: 6px;
+  font-weight: 400;
+}
+
+.totalPeriod {
+  font-size: 11px;
+  color: #64748b;
+  font-family: monospace;
+}
+
+/* ─── Chart Card ─── */
+.chartCard {
+  background: #131f2e;
+  border: 1px solid #1e2d3d;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.sectionTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+.chartWrapper {
+  width: 100%;
+}
+
+/* ─── Tooltip ─── */
+.tooltip {
+  background: #1e2d3d;
+  border: 1px solid #2d3f50;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.tooltipLabel {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 2px;
+}
+
+.tooltipValue {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ff9900;
+}
+
+/* ─── List Card ─── */
+.listCard {
+  background: #131f2e;
+  border: 1px solid #1e2d3d;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.serviceList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.serviceRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.serviceInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.serviceDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.serviceName {
+  font-size: 12px;
+  color: #e2e8f0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.serviceRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 16px;
+}
+
+.serviceBar {
+  flex: 1;
+  height: 4px;
+  background: #1e2d3d;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.serviceBarFill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+
+.serviceAmount {
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+  font-family: monospace;
+  min-width: 80px;
+  text-align: right;
+}
+
+.noData {
+  font-size: 13px;
+  color: #64748b;
+  text-align: center;
+  margin: 16px 0;
+}
+
+/* ─── Loading ─── */
+.loadingWrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #1e2d3d;
+  border-top-color: #ff9900;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Empty ─── */
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: #64748b;
+  font-size: 14px;
+  min-height: 300px;
+}
+
+.backBtn {
+  background: #ff9900;
+  border: none;
+  border-radius: 8px;
+  color: #0f1923;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 10px 24px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.backBtn:hover {
+  background: #ffac33;
+}

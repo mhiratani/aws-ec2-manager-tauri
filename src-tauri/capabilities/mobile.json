@@ -1,0 +1,25 @@
+{
+  "$schema": "https://tauri.app/schemas/capabilities/v1",
+  "identifier": "mobile-capability",
+  "description": "Capability for mobile (Android/iOS)",
+  "windows": ["main"],
+  "platforms": ["android", "iOS"],
+  "permissions": [
+    "core:default",
+    "core:app:default",
+    "core:event:default",
+    "core:window:default",
+    "core:webview:default",
+    "core:path:default",
+    "fs:default",
+    "fs:allow-read-text-file",
+    "fs:allow-write-text-file",
+    "fs:allow-exists",
+    "fs:allow-app-read",
+    "fs:allow-app-write",
+    "fs:allow-app-read-recursive",
+    "fs:allow-app-write-recursive",
+    "fs:allow-mkdir",
+    "fs:allow-create"
+  ]
+}

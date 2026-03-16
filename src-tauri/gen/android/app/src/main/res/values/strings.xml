@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">AWS EC2 Manager</string>
+    <string name="main_activity_title">AWS EC2 Manager</string>
+</resources>

@@ -1,0 +1,177 @@
+.container {
+  min-height: 100vh;
+  background: #0f1923;
+  color: #e2e8f0;
+  padding: 48px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.header {
+  text-align: center;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #ff9900;
+  margin: 0 0 6px;
+  letter-spacing: 0.5px;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.input {
+  background: #1e2d3d;
+  border: 1px solid #2d3f50;
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-size: 14px;
+  padding: 10px 14px;
+  outline: none;
+  transition: border-color 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.input:focus {
+  border-color: #ff9900;
+}
+
+.input::placeholder {
+  color: #4a5568;
+}
+
+.secretWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.secretWrapper .input {
+  padding-right: 60px;
+}
+
+.toggleBtn {
+  position: absolute;
+  right: 10px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: color 0.2s;
+}
+
+.toggleBtn:hover {
+  color: #ff9900;
+}
+
+.select {
+  background: #1e2d3d;
+  border: 1px solid #2d3f50;
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-size: 14px;
+  padding: 10px 14px;
+  outline: none;
+  width: 100%;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.select:focus {
+  border-color: #ff9900;
+}
+
+.saveBtn {
+  background: #ff9900;
+  border: none;
+  border-radius: 8px;
+  color: #0f1923;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 13px;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+  margin-top: 4px;
+}
+
+.saveBtn:hover:not(:disabled) {
+  background: #ffac33;
+}
+
+.saveBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cancelBtn {
+  background: transparent;
+  border: 1px solid #2d3f50;
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 14px;
+  padding: 11px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.cancelBtn:hover {
+  border-color: #94a3b8;
+  color: #e2e8f0;
+}
+
+.note {
+  background: #1e2d3d;
+  border: 1px solid #2d3f50;
+  border-radius: 8px;
+  padding: 14px 16px;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.7;
+}
+
+.note p {
+  margin: 0;
+}
+
+.note p + p {
+  margin-top: 4px;
+}
+
+.note code {
+  background: #0f1923;
+  color: #93c5fd;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 11px;
+}

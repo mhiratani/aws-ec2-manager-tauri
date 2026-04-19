@@ -111,6 +111,13 @@ export function InstanceListScreen() {
           </button>
           <button
             className={styles.iconBtn}
+            onClick={() => navigate('/ecs')}
+            title="ECS"
+          >
+            ECS
+          </button>
+          <button
+            className={styles.iconBtn}
             onClick={() => navigate('/cost')}
             title="コスト"
           >

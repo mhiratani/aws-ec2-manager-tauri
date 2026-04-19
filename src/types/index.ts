@@ -4,6 +4,23 @@ export interface AwsCredentials {
   region: string;
 }
 
+// ─── マルチアカウント ──────────────────────────────────────────────────────────
+
+export interface AwsAccount {
+  id: string;           // UUID
+  name: string;         // 表示名（例: "開発環境", "本番環境"）
+  accessKeyId: string;
+  secretAccessKey: string;
+  region: string;
+}
+
+export interface AccountsStorage {
+  accounts: AwsAccount[];
+  activeAccountId: string | null;
+}
+
+// ─── EC2 ─────────────────────────────────────────────────────────────────────
+
 export interface Ec2Instance {
   instance_id: string;
   name: string;
@@ -14,6 +31,31 @@ export interface Ec2Instance {
   availability_zone: string;
   launch_time: string;
 }
+
+// ─── ECS ─────────────────────────────────────────────────────────────────────
+
+export interface EcsCluster {
+  cluster_arn: string;
+  cluster_name: string;
+  status: string;
+  running_tasks_count: number;
+  pending_tasks_count: number;
+  active_services_count: number;
+}
+
+export interface EcsService {
+  service_arn: string;
+  service_name: string;
+  cluster_arn: string;
+  status: string;
+  desired_count: number;
+  running_count: number;
+  pending_count: number;
+  min_capacity: number | null;  // Auto Scaling 最小値
+  max_capacity: number | null;  // Auto Scaling 最大値
+}
+
+// ─── Cost ────────────────────────────────────────────────────────────────────
 
 export interface CostEntry {
   service: string;
@@ -28,6 +70,8 @@ export interface MonthlyCostSummary {
   unit: string;
   by_service: CostEntry[];
 }
+
+// ─── 共通 ────────────────────────────────────────────────────────────────────
 
 export type InstanceState =
   | 'pending'

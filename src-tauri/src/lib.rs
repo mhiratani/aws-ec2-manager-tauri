@@ -2,6 +2,9 @@ use aws_config::Region;
 use aws_credential_types::Credentials;
 use aws_sdk_ec2::Client as Ec2Client;
 use aws_sdk_costexplorer::Client as CeClient;
+use aws_sdk_ecs::Client as EcsClient;
+use aws_sdk_applicationautoscaling::Client as AasClient;
+use aws_sdk_applicationautoscaling::types::ServiceNamespace;
 use aws_sdk_costexplorer::operation::get_cost_and_usage::GetCostAndUsageOutput;
 use aws_sdk_costexplorer::types::{
     DateInterval, Granularity, Group, GroupDefinition, GroupDefinitionType, ResultByTime,
@@ -48,10 +51,32 @@ pub struct MonthlyCostSummary {
     pub by_service: Vec<CostEntry>,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct EcsCluster {
+    pub cluster_arn: String,
+    pub cluster_name: String,
+    pub status: String,
+    pub running_tasks_count: i32,
+    pub pending_tasks_count: i32,
+    pub active_services_count: i32,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct EcsService {
+    pub service_arn: String,
+    pub service_name: String,
+    pub cluster_arn: String,
+    pub status: String,
+    pub desired_count: i32,
+    pub running_count: i32,
+    pub pending_count: i32,
+    pub min_capacity: Option<i32>,
+    pub max_capacity: Option<i32>,
+}
+
 // ─── AWS クライアント構築 ────────────────────────────────────────────────────────
 
 fn create_http_client() -> SharedHttpClient {
-    // hyper-rustlsのwebpki-roots機能を使用して証明書を自動設定
     let https_connector = hyper_rustls::HttpsConnectorBuilder::new()
         .with_webpki_roots()
         .https_or_http()
@@ -68,9 +93,7 @@ async fn build_ec2_client(creds: &AwsCredentials) -> Ec2Client {
         &creds.secret_access_key,
         None,
     );
-    
     let http_client = create_http_client();
-    
     let config = aws_config::from_env()
         .credentials_provider(credentials)
         .region(Region::new(creds.region.clone()))
@@ -86,10 +109,7 @@ async fn build_ce_client(creds: &AwsCredentials) -> CeClient {
         &creds.secret_access_key,
         None,
     );
-    
     let http_client = create_http_client();
-    
-    // Cost Explorer は us-east-1 のみ
     let config = aws_config::from_env()
         .credentials_provider(credentials)
         .region(Region::new("us-east-1".to_string()))
@@ -97,6 +117,38 @@ async fn build_ce_client(creds: &AwsCredentials) -> CeClient {
         .load()
         .await;
     CeClient::new(&config)
+}
+
+async fn build_ecs_client(creds: &AwsCredentials) -> EcsClient {
+    let credentials = Credentials::from_keys(
+        &creds.access_key_id,
+        &creds.secret_access_key,
+        None,
+    );
+    let http_client = create_http_client();
+    let config = aws_config::from_env()
+        .credentials_provider(credentials)
+        .region(Region::new(creds.region.clone()))
+        .http_client(http_client)
+        .load()
+        .await;
+    EcsClient::new(&config)
+}
+
+async fn build_aas_client(creds: &AwsCredentials) -> AasClient {
+    let credentials = Credentials::from_keys(
+        &creds.access_key_id,
+        &creds.secret_access_key,
+        None,
+    );
+    let http_client = create_http_client();
+    let config = aws_config::from_env()
+        .credentials_provider(credentials)
+        .region(Region::new(creds.region.clone()))
+        .http_client(http_client)
+        .load()
+        .await;
+    AasClient::new(&config)
 }
 
 // ─── コスト処理ヘルパー ─────────────────────────────────────────────────────────
@@ -130,7 +182,7 @@ fn process_groups(
     }
 }
 
-// ─── Tauri コマンド ────────────────────────────────────────────────────────────
+// ─── Tauri コマンド (EC2) ──────────────────────────────────────────────────────
 
 #[tauri::command]
 async fn list_instances(creds: AwsCredentials) -> Result<Vec<Ec2Instance>, String> {
@@ -168,7 +220,6 @@ async fn list_instances(creds: AwsCredentials) -> Result<Vec<Ec2Instance>, Strin
                 .map(|t| t.to_string())
                 .unwrap_or_else(|| "".to_string());
 
-            // Name タグを取得
             let name = inst
                 .tags()
                 .iter()
@@ -221,16 +272,16 @@ async fn stop_instance(creds: AwsCredentials, instance_id: String) -> Result<Str
     Ok(format!("Instance {} stop request sent.", instance_id))
 }
 
+// ─── Tauri コマンド (Cost) ─────────────────────────────────────────────────────
+
 #[tauri::command]
 async fn get_monthly_cost(creds: AwsCredentials) -> Result<MonthlyCostSummary, String> {
     let client = build_ce_client(&creds).await;
 
-    // 当月の開始日と今日の日付を取得
     let now = Local::now();
     let start = format!("{}-{:02}-01", now.year(), now.month());
     let end = format!("{}-{:02}-{:02}", now.year(), now.month(), now.day());
 
-    // 終了日が開始日と同じ場合（月初の場合）は翌日にする
     let end = if start == end {
         let tomorrow = now + chrono::Duration::days(1);
         format!("{}-{:02}-{:02}", tomorrow.year(), tomorrow.month(), tomorrow.day())
@@ -269,7 +320,6 @@ async fn get_monthly_cost(creds: AwsCredentials) -> Result<MonthlyCostSummary, S
         process_groups(groups, &mut by_service, &mut total_amount, &mut unit);
     }
 
-    // コスト順にソート（降順）
     by_service.sort_by(|a, b| {
         let a_val: f64 = a.amount.parse().unwrap_or(0.0);
         let b_val: f64 = b.amount.parse().unwrap_or(0.0);
@@ -285,6 +335,206 @@ async fn get_monthly_cost(creds: AwsCredentials) -> Result<MonthlyCostSummary, S
     })
 }
 
+// ─── Tauri コマンド (ECS) ──────────────────────────────────────────────────────
+
+#[tauri::command]
+async fn list_ecs_clusters(creds: AwsCredentials) -> Result<Vec<EcsCluster>, String> {
+    let client = build_ecs_client(&creds).await;
+
+    // クラスターARN一覧を取得
+    let list_resp = client
+        .list_clusters()
+        .send()
+        .await
+        .map_err(|e| format!("ECS ListClusters error: {}", e))?;
+
+    let cluster_arns: Vec<String> = list_resp.cluster_arns().to_vec();
+    if cluster_arns.is_empty() {
+        return Ok(vec![]);
+    }
+
+    // クラスター詳細を取得
+    let mut describe_req = client.describe_clusters();
+    for arn in &cluster_arns {
+        describe_req = describe_req.clusters(arn);
+    }
+
+    let desc_resp = describe_req
+        .send()
+        .await
+        .map_err(|e| format!("ECS DescribeClusters error: {}", e))?;
+
+    let clusters: Vec<EcsCluster> = desc_resp
+        .clusters()
+        .iter()
+        .map(|c| EcsCluster {
+            cluster_arn: c.cluster_arn().unwrap_or("").to_string(),
+            cluster_name: c.cluster_name().unwrap_or("").to_string(),
+            status: c.status().unwrap_or("").to_string(),
+            running_tasks_count: c.running_tasks_count(),
+            pending_tasks_count: c.pending_tasks_count(),
+            active_services_count: c.active_services_count(),
+        })
+        .collect();
+
+    Ok(clusters)
+}
+
+#[tauri::command]
+async fn list_ecs_services(
+    creds: AwsCredentials,
+    cluster_arn: String,
+) -> Result<Vec<EcsService>, String> {
+    let ecs_client = build_ecs_client(&creds).await;
+    let aas_client = build_aas_client(&creds).await;
+
+    // サービスARN一覧を取得
+    let list_resp = ecs_client
+        .list_services()
+        .cluster(&cluster_arn)
+        .send()
+        .await
+        .map_err(|e| format!("ECS ListServices error: {}", e))?;
+
+    let service_arns: Vec<String> = list_resp.service_arns().to_vec();
+    if service_arns.is_empty() {
+        return Ok(vec![]);
+    }
+
+    // サービス詳細を取得（最大10件ずつ）
+    let mut all_services: Vec<aws_sdk_ecs::types::Service> = Vec::new();
+    for chunk in service_arns.chunks(10) {
+        let mut desc_req = ecs_client.describe_services().cluster(&cluster_arn);
+        for arn in chunk {
+            desc_req = desc_req.services(arn);
+        }
+        let desc_resp = desc_req
+            .send()
+            .await
+            .map_err(|e| format!("ECS DescribeServices error: {}", e))?;
+        all_services.extend(desc_resp.services().to_vec());
+    }
+
+    // ApplicationAutoScaling のスケーラブルターゲットを取得
+    let resource_ids: Vec<String> = all_services
+        .iter()
+        .filter_map(|s| {
+            let cluster_name = cluster_arn.split('/').last().unwrap_or(&cluster_arn);
+            let service_name = s.service_name()?;
+            Some(format!("service/{}/{}", cluster_name, service_name))
+        })
+        .collect();
+
+    // スケーラブルターゲット一覧を取得
+    let mut scaling_map: std::collections::HashMap<String, (i32, i32)> =
+        std::collections::HashMap::new();
+
+    if !resource_ids.is_empty() {
+        let mut aas_req = aas_client
+            .describe_scalable_targets()
+            .service_namespace(ServiceNamespace::Ecs)
+            .scalable_dimension(aws_sdk_applicationautoscaling::types::ScalableDimension::EcsServiceDesiredCount);
+
+        for rid in &resource_ids {
+            aas_req = aas_req.resource_ids(rid);
+        }
+
+        if let Ok(aas_resp) = aas_req.send().await {
+            for target in aas_resp.scalable_targets() {
+                let rid = target.resource_id().to_string();
+                let min = target.min_capacity();
+                let max = target.max_capacity();
+                scaling_map.insert(rid, (min, max));
+            }
+        }
+    }
+
+    // EcsService 型に変換
+    let services: Vec<EcsService> = all_services
+        .iter()
+        .map(|s| {
+            let service_name = s.service_name().unwrap_or("").to_string();
+            let cluster_name = cluster_arn.split('/').last().unwrap_or(&cluster_arn);
+            let resource_id = format!("service/{}/{}", cluster_name, service_name);
+            let (min_capacity, max_capacity) = scaling_map
+                .get(&resource_id)
+                .map(|(min, max)| (Some(*min), Some(*max)))
+                .unwrap_or((None, None));
+
+            EcsService {
+                service_arn: s.service_arn().unwrap_or("").to_string(),
+                service_name,
+                cluster_arn: s.cluster_arn().unwrap_or("").to_string(),
+                status: s.status().unwrap_or("").to_string(),
+                desired_count: s.desired_count(),
+                running_count: s.running_count(),
+                pending_count: s.pending_count(),
+                min_capacity,
+                max_capacity,
+            }
+        })
+        .collect();
+
+    Ok(services)
+}
+
+#[tauri::command]
+async fn update_ecs_service(
+    creds: AwsCredentials,
+    cluster_arn: String,
+    service_name: String,
+    desired_count: i32,
+    min_capacity: i32,
+    max_capacity: i32,
+) -> Result<String, String> {
+    let ecs_client = build_ecs_client(&creds).await;
+    let aas_client = build_aas_client(&creds).await;
+
+    // ApplicationAutoScaling の min/max を先に更新
+    let cluster_name = cluster_arn.split('/').last().unwrap_or(&cluster_arn);
+    let resource_id = format!("service/{}/{}", cluster_name, service_name);
+
+    // スケーラブルターゲットが存在するか確認してから更新
+    let aas_check = aas_client
+        .describe_scalable_targets()
+        .service_namespace(ServiceNamespace::Ecs)
+        .scalable_dimension(aws_sdk_applicationautoscaling::types::ScalableDimension::EcsServiceDesiredCount)
+        .resource_ids(&resource_id)
+        .send()
+        .await;
+
+    if let Ok(check_resp) = aas_check {
+        if !check_resp.scalable_targets().is_empty() {
+            // スケーラブルターゲットが存在する場合は min/max を更新
+            aas_client
+                .register_scalable_target()
+                .service_namespace(ServiceNamespace::Ecs)
+                .scalable_dimension(aws_sdk_applicationautoscaling::types::ScalableDimension::EcsServiceDesiredCount)
+                .resource_id(&resource_id)
+                .min_capacity(min_capacity)
+                .max_capacity(max_capacity)
+                .send()
+                .await
+                .map_err(|e| format!("ApplicationAutoScaling RegisterScalableTarget error: {}", e))?;
+        }
+    }
+
+    // ECS サービスの desired count を更新
+    ecs_client
+        .update_service()
+        .cluster(&cluster_arn)
+        .service(&service_name)
+        .desired_count(desired_count)
+        .send()
+        .await
+        .map_err(|e| format!("ECS UpdateService error: {}", e))?;
+
+    Ok(format!(
+        "Service {} updated: desiredCount={}, min={}, max={}",
+        service_name, desired_count, min_capacity, max_capacity
+    ))
+}
+
 // ─── エントリポイント ───────────────────────────────────────────────────────────
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -298,6 +548,9 @@ pub fn run() {
             start_instance,
             stop_instance,
             get_monthly_cost,
+            list_ecs_clusters,
+            list_ecs_services,
+            update_ecs_service,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

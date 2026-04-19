@@ -4,6 +4,7 @@ import { ToastProvider } from './contexts/ToastContext';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { InstanceListScreen } from './screens/InstanceListScreen';
 import { CostScreen } from './screens/CostScreen';
+import { EcsScreen } from './screens/EcsScreen';
 import './App.css';
 
 // AppProvider の内側で使用するリダイレクトコンポーネント
@@ -27,6 +28,7 @@ function AppRoutes() {
         <Route path="/settings" element={<SettingsScreen />} />
         <Route path="/instances" element={<InstanceListScreen />} />
         <Route path="/cost" element={<CostScreen />} />
+        <Route path="/ecs" element={<EcsScreen />} />
       </Routes>
     </BrowserRouter>
   );

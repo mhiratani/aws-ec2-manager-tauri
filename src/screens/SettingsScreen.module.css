@@ -12,6 +12,13 @@
   text-align: center;
 }
 
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
 .title {
   font-size: 22px;
   font-weight: 700;
@@ -25,6 +32,180 @@
   color: #94a3b8;
   margin: 0;
 }
+
+.iconBtn {
+  position: absolute;
+  right: 0;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 6px;
+  transition: color 0.2s;
+  line-height: 1;
+}
+
+.iconBtn:hover {
+  color: #e2e8f0;
+}
+
+/* ─── アカウント一覧 ─────────────────────────────────────────── */
+
+.accountList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.accountCard {
+  background: #1e2d3d;
+  border: 1px solid #2d3f50;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.accountCard:hover {
+  border-color: #4a6072;
+}
+
+.accountCardActive {
+  border-color: #ff9900;
+  background: #1e2d3d;
+}
+
+.accountCardLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.accountActiveIcon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #2d3f50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ff9900;
+  flex-shrink: 0;
+  background: transparent;
+}
+
+.accountCardActive .accountActiveIcon {
+  border-color: #ff9900;
+  background: rgba(255, 153, 0, 0.12);
+}
+
+.accountInfo {
+  min-width: 0;
+}
+
+.accountName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.accountCardActive .accountName {
+  color: #ff9900;
+}
+
+.accountMeta {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.accountCardActions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.editBtn {
+  background: transparent;
+  border: 1px solid #2d3f50;
+  border-radius: 6px;
+  color: #94a3b8;
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.editBtn:hover {
+  border-color: #94a3b8;
+  color: #e2e8f0;
+}
+
+.deleteBtn {
+  background: transparent;
+  border: 1px solid #2d3f50;
+  border-radius: 6px;
+  color: #ef4444;
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.deleteBtn:hover {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.emptyAccounts {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 32px 0;
+}
+
+.emptyText {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+}
+
+.addBtn {
+  background: transparent;
+  border: 1px dashed #4a6072;
+  border-radius: 10px;
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px;
+  cursor: pointer;
+  width: 100%;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.addBtn:hover {
+  border-color: #ff9900;
+  color: #ff9900;
+  background: rgba(255, 153, 0, 0.04);
+}
+
+/* ─── フォーム ───────────────────────────────────────────────── */
 
 .form {
   display: flex;
@@ -150,6 +331,8 @@
   color: #e2e8f0;
 }
 
+/* ─── 注記 ─────────────────────────────────────────────────── */
+
 .note {
   background: #1e2d3d;
   border: 1px solid #2d3f50;
@@ -174,4 +357,87 @@
   padding: 1px 5px;
   border-radius: 4px;
   font-size: 11px;
+}
+
+/* ─── 削除確認ダイアログ ─────────────────────────────────────── */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.dialog {
+  background: #1e2d3d;
+  border: 1px solid #2d3f50;
+  border-radius: 14px;
+  padding: 24px 20px;
+  width: 100%;
+  max-width: 340px;
+}
+
+.dialogTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin: 0 0 10px;
+}
+
+.dialogMsg {
+  font-size: 14px;
+  color: #94a3b8;
+  margin: 0 0 20px;
+  line-height: 1.6;
+}
+
+.dialogActions {
+  display: flex;
+  gap: 10px;
+}
+
+.dialogCancelBtn {
+  flex: 1;
+  background: transparent;
+  border: 1px solid #2d3f50;
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 14px;
+  padding: 10px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.dialogCancelBtn:hover {
+  border-color: #94a3b8;
+}
+
+.dialogOkBtn {
+  flex: 1;
+  background: #ff9900;
+  border: none;
+  border-radius: 8px;
+  color: #0f1923;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.dialogOkBtn:hover {
+  background: #ffac33;
+}
+
+.dialogDeleteBtn {
+  background: #ef4444;
+  color: #fff;
+}
+
+.dialogDeleteBtn:hover {
+  background: #f87171;
 }

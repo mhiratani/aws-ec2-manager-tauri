@@ -7,6 +7,7 @@ function toRustCreds(creds: AwsCredentials) {
     access_key_id: creds.accessKeyId,
     secret_access_key: creds.secretAccessKey,
     region: creds.region,
+    role_arn: creds.roleArn || null,
   };
 }
 

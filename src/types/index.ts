@@ -2,6 +2,7 @@ export interface AwsCredentials {
   accessKeyId: string;
   secretAccessKey: string;
   region: string;
+  roleArn?: string;     // スイッチロール先のロールARN（オプション）
 }
 
 // ─── マルチアカウント ──────────────────────────────────────────────────────────
@@ -12,6 +13,7 @@ export interface AwsAccount {
   accessKeyId: string;
   secretAccessKey: string;
   region: string;
+  roleArn?: string;     // スイッチロール先のロールARN（オプション）
 }
 
 export interface AccountsStorage {

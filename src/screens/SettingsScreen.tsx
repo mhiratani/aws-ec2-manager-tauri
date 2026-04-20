@@ -12,6 +12,7 @@ interface AccountFormState {
   accessKeyId: string;
   secretAccessKey: string;
   region: string;
+  roleArn: string;
   showSecret: boolean;
 }
 
@@ -20,6 +21,7 @@ const defaultForm = (): AccountFormState => ({
   accessKeyId: '',
   secretAccessKey: '',
   region: 'ap-northeast-1',
+  roleArn: '',
   showSecret: false,
 });
 
@@ -48,6 +50,7 @@ export function SettingsScreen() {
       accessKeyId: account.accessKeyId,
       secretAccessKey: account.secretAccessKey,
       region: account.region,
+      roleArn: account.roleArn || '',
       showSecret: false,
     });
     setEditTarget(account);
@@ -76,6 +79,7 @@ export function SettingsScreen() {
           accessKeyId: form.accessKeyId.trim(),
           secretAccessKey: form.secretAccessKey.trim(),
           region: form.region,
+          roleArn: form.roleArn.trim() || undefined,
         });
         showToast(`"${form.name}" を追加しました`, 'success');
       } else if (mode === 'edit' && editTarget) {
@@ -85,6 +89,7 @@ export function SettingsScreen() {
           accessKeyId: form.accessKeyId.trim(),
           secretAccessKey: form.secretAccessKey.trim(),
           region: form.region,
+          roleArn: form.roleArn.trim() || undefined,
         });
         showToast(`"${form.name}" を更新しました`, 'success');
       }
@@ -194,6 +199,22 @@ export function SettingsScreen() {
             </select>
           </div>
 
+          <div className={styles.formGroup}>
+            <label className={styles.label}>Role ARN（スイッチロール・オプション）</label>
+            <input
+              className={styles.input}
+              type="text"
+              value={form.roleArn}
+              onChange={(e) => setForm((f) => ({ ...f, roleArn: e.target.value }))}
+              placeholder="例: arn:aws:iam::123456789012:role/MyRole"
+              autoComplete="off"
+              spellCheck={false}
+            />
+            <p style={{ fontSize: '0.75rem', color: '#888', margin: '4px 0 0' }}>
+              空欄の場合はアクセスキーで直接認証します
+            </p>
+          </div>
+
           <button
             className={styles.saveBtn}
             onClick={handleSave}
@@ -258,6 +279,7 @@ export function SettingsScreen() {
                       <div className={styles.accountName}>{account.name}</div>
                       <div className={styles.accountMeta}>
                         {account.region} · {account.accessKeyId.slice(0, 8)}···
+                        {account.roleArn && ' · 🔄 AssumeRole'}
                       </div>
                     </div>
                   </div>

@@ -265,6 +265,7 @@ dependencies = [
  "aws-sdk-costexplorer",
  "aws-sdk-ec2",
  "aws-sdk-ecs",
+ "aws-sdk-sts",
  "aws-smithy-runtime",
  "aws-smithy-runtime-api",
  "chrono",

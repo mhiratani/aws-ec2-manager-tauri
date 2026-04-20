@@ -9,6 +9,7 @@ use aws_sdk_costexplorer::operation::get_cost_and_usage::GetCostAndUsageOutput;
 use aws_sdk_costexplorer::types::{
     DateInterval, Granularity, Group, GroupDefinition, GroupDefinitionType, ResultByTime,
 };
+use aws_sdk_sts::Client as StsClient;
 use aws_smithy_runtime::client::http::hyper_014::HyperClientBuilder;
 use aws_smithy_runtime_api::client::http::SharedHttpClient;
 use serde::{Deserialize, Serialize};
@@ -21,6 +22,8 @@ pub struct AwsCredentials {
     pub access_key_id: String,
     pub secret_access_key: String,
     pub region: String,
+    #[serde(default)]
+    pub role_arn: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -87,68 +90,87 @@ fn create_http_client() -> SharedHttpClient {
     HyperClientBuilder::new().build(https_connector)
 }
 
-async fn build_ec2_client(creds: &AwsCredentials) -> Ec2Client {
-    let credentials = Credentials::from_keys(
+/// クレデンシャルを解決する。
+/// role_arn が指定されている場合は STS AssumeRole で一時クレデンシャルを取得する。
+/// 指定されていない場合は元のアクセスキーをそのまま返す。
+async fn resolve_credentials(creds: &AwsCredentials) -> Result<Credentials, String> {
+    let base_credentials = Credentials::from_keys(
         &creds.access_key_id,
         &creds.secret_access_key,
         None,
     );
+
+    // role_arn が空でなければ AssumeRole を実行
+    let role_arn = creds.role_arn.as_deref().unwrap_or("").trim();
+    if role_arn.is_empty() {
+        return Ok(base_credentials);
+    }
+
+    // STS クライアントを元のクレデンシャルで構築
     let http_client = create_http_client();
-    let config = aws_config::from_env()
-        .credentials_provider(credentials)
+    let sts_config = aws_config::from_env()
+        .credentials_provider(base_credentials)
         .region(Region::new(creds.region.clone()))
         .http_client(http_client)
         .load()
         .await;
-    Ec2Client::new(&config)
+    let sts_client = StsClient::new(&sts_config);
+
+    // AssumeRole 実行
+    let assume_resp = sts_client
+        .assume_role()
+        .role_arn(role_arn)
+        .role_session_name("ec2-manager-session")
+        .send()
+        .await
+        .map_err(|e| format!("STS AssumeRole error: {}", e))?;
+
+    let sts_creds = assume_resp
+        .credentials()
+        .ok_or_else(|| "AssumeRole returned no credentials".to_string())?;
+
+    let access_key = sts_creds.access_key_id().to_string();
+    let secret_key = sts_creds.secret_access_key().to_string();
+    let session_token = sts_creds.session_token().to_string();
+
+    Ok(Credentials::from_keys(
+        access_key,
+        secret_key,
+        Some(session_token),
+    ))
 }
 
-async fn build_ce_client(creds: &AwsCredentials) -> CeClient {
-    let credentials = Credentials::from_keys(
-        &creds.access_key_id,
-        &creds.secret_access_key,
-        None,
-    );
+/// 指定リージョンで AWS SDK の SdkConfig を構築する
+async fn build_sdk_config(creds: &AwsCredentials, region: &str) -> Result<aws_config::SdkConfig, String> {
+    let credentials = resolve_credentials(creds).await?;
     let http_client = create_http_client();
     let config = aws_config::from_env()
         .credentials_provider(credentials)
-        .region(Region::new("us-east-1".to_string()))
+        .region(Region::new(region.to_string()))
         .http_client(http_client)
         .load()
         .await;
-    CeClient::new(&config)
+    Ok(config)
 }
 
-async fn build_ecs_client(creds: &AwsCredentials) -> EcsClient {
-    let credentials = Credentials::from_keys(
-        &creds.access_key_id,
-        &creds.secret_access_key,
-        None,
-    );
-    let http_client = create_http_client();
-    let config = aws_config::from_env()
-        .credentials_provider(credentials)
-        .region(Region::new(creds.region.clone()))
-        .http_client(http_client)
-        .load()
-        .await;
-    EcsClient::new(&config)
+async fn build_ec2_client(creds: &AwsCredentials) -> Result<Ec2Client, String> {
+    let config = build_sdk_config(creds, &creds.region).await?;
+    Ok(Ec2Client::new(&config))
 }
 
-async fn build_aas_client(creds: &AwsCredentials) -> AasClient {
-    let credentials = Credentials::from_keys(
-        &creds.access_key_id,
-        &creds.secret_access_key,
-        None,
-    );
-    let http_client = create_http_client();
-    let config = aws_config::from_env()
-        .credentials_provider(credentials)
-        .region(Region::new(creds.region.clone()))
-        .http_client(http_client)
-        .load()
-        .await;
-    AasClient::new(&config)
+async fn build_ce_client(creds: &AwsCredentials) -> Result<CeClient, String> {
+    let config = build_sdk_config(creds, "us-east-1").await?;
+    Ok(CeClient::new(&config))
+}
+
+async fn build_ecs_client(creds: &AwsCredentials) -> Result<EcsClient, String> {
+    let config = build_sdk_config(creds, &creds.region).await?;
+    Ok(EcsClient::new(&config))
+}
+
+async fn build_aas_client(creds: &AwsCredentials) -> Result<AasClient, String> {
+    let config = build_sdk_config(creds, &creds.region).await?;
+    Ok(AasClient::new(&config))
 }
 
 // ─── コスト処理ヘルパー ─────────────────────────────────────────────────────────
@@ -186,7 +208,7 @@ fn process_groups(
 
 #[tauri::command]
 async fn list_instances(creds: AwsCredentials) -> Result<Vec<Ec2Instance>, String> {
-    let client = build_ec2_client(&creds).await;
+    let client = build_ec2_client(&creds).await?;
 
     let resp = client
         .describe_instances()
@@ -246,7 +268,7 @@ async fn list_instances(creds: AwsCredentials) -> Result<Vec<Ec2Instance>, Strin
 
 #[tauri::command]
 async fn start_instance(creds: AwsCredentials, instance_id: String) -> Result<String, String> {
-    let client = build_ec2_client(&creds).await;
+    let client = build_ec2_client(&creds).await?;
 
     client
         .start_instances()
@@ -260,7 +282,7 @@ async fn start_instance(creds: AwsCredentials, instance_id: String) -> Result<St
 
 #[tauri::command]
 async fn stop_instance(creds: AwsCredentials, instance_id: String) -> Result<String, String> {
-    let client = build_ec2_client(&creds).await;
+    let client = build_ec2_client(&creds).await?;
 
     client
         .stop_instances()
@@ -276,7 +298,7 @@ async fn stop_instance(creds: AwsCredentials, instance_id: String) -> Result<Str
 
 #[tauri::command]
 async fn get_monthly_cost(creds: AwsCredentials) -> Result<MonthlyCostSummary, String> {
-    let client = build_ce_client(&creds).await;
+    let client = build_ce_client(&creds).await?;
 
     let now = Local::now();
     let start = format!("{}-{:02}-01", now.year(), now.month());
@@ -339,7 +361,7 @@ async fn get_monthly_cost(creds: AwsCredentials) -> Result<MonthlyCostSummary, S
 
 #[tauri::command]
 async fn list_ecs_clusters(creds: AwsCredentials) -> Result<Vec<EcsCluster>, String> {
-    let client = build_ecs_client(&creds).await;
+    let client = build_ecs_client(&creds).await?;
 
     // クラスターARN一覧を取得
     let list_resp = client
@@ -385,8 +407,8 @@ async fn list_ecs_services(
     creds: AwsCredentials,
     cluster_arn: String,
 ) -> Result<Vec<EcsService>, String> {
-    let ecs_client = build_ecs_client(&creds).await;
-    let aas_client = build_aas_client(&creds).await;
+    let ecs_client = build_ecs_client(&creds).await?;
+    let aas_client = build_aas_client(&creds).await?;
 
     // サービスARN一覧を取得
     let list_resp = ecs_client
@@ -487,8 +509,8 @@ async fn update_ecs_service(
     min_capacity: i32,
     max_capacity: i32,
 ) -> Result<String, String> {
-    let ecs_client = build_ecs_client(&creds).await;
-    let aas_client = build_aas_client(&creds).await;
+    let ecs_client = build_ecs_client(&creds).await?;
+    let aas_client = build_aas_client(&creds).await?;
 
     // ApplicationAutoScaling の min/max を先に更新
     let cluster_name = cluster_arn.split('/').last().unwrap_or(&cluster_arn);

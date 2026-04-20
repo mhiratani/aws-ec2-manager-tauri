@@ -52,6 +52,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         accessKeyId: activeAccount.accessKeyId,
         secretAccessKey: activeAccount.secretAccessKey,
         region: activeAccount.region,
+        roleArn: activeAccount.roleArn,
       }
     : null;
 

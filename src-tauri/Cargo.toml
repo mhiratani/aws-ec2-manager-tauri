@@ -26,6 +26,7 @@ aws-sdk-ec2 = "1"
 aws-sdk-costexplorer = "1"
 aws-sdk-ecs = "1"
 aws-sdk-applicationautoscaling = "1"
+aws-sdk-sts = "1"
 chrono = "0.4"
 aws-smithy-runtime = { version = "1", features = ["tls-rustls"] }
 aws-smithy-runtime-api = "1"

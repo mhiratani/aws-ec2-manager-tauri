@@ -75,6 +75,7 @@ export function CostScreen() {
       const data = await getMonthlyCost(credentials);
       setSummary(data);
     } catch (e) {
+      console.error('[CostScreen] fetchCost error:', e);
       showToast('コスト取得失敗: ' + String(e), 'error');
     } finally {
       setIsLoading(false);
@@ -83,7 +84,7 @@ export function CostScreen() {
 
   useEffect(() => {
     fetchCost();
-  }, [fetchCost]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!credentials) {
     return (

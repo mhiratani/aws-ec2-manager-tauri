@@ -331,32 +331,89 @@
   color: #e2e8f0;
 }
 
-/* ─── 注記 ─────────────────────────────────────────────────── */
+/* ─── 必要な権限セクション ──────────────────────────────────── */
 
-.note {
+.permSection {
   background: #1e2d3d;
   border: 1px solid #2d3f50;
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.permTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 0.4px;
+}
+
+.permTable {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid #2d3f50;
   border-radius: 8px;
-  padding: 14px 16px;
-  font-size: 12px;
-  color: #64748b;
-  line-height: 1.7;
+  overflow: hidden;
 }
 
-.note p {
-  margin: 0;
+.permRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  border-bottom: 1px solid #2d3f50;
 }
 
-.note p + p {
-  margin-top: 4px;
+.permRow:last-child {
+  border-bottom: none;
 }
 
-.note code {
+.permService {
+  flex-shrink: 0;
+  width: 96px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ff9900;
+  background: rgba(255, 153, 0, 0.07);
+  padding: 8px 10px;
+  border-right: 1px solid #2d3f50;
+  line-height: 1.5;
+  display: flex;
+  align-items: flex-start;
+  padding-top: 10px;
+}
+
+.permCodes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px 10px;
+  align-items: center;
+}
+
+.permCodes code {
   background: #0f1923;
   color: #93c5fd;
-  padding: 1px 5px;
+  padding: 2px 6px;
   border-radius: 4px;
+  font-size: 10px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  white-space: nowrap;
+}
+
+.permNote {
+  font-size: 10px;
+  color: #64748b;
+  font-style: italic;
+}
+
+.permFooter {
   font-size: 11px;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.6;
 }
 
 /* ─── 削除確認ダイアログ ─────────────────────────────────────── */

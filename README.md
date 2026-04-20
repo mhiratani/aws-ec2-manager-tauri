@@ -30,6 +30,28 @@ Tauri 2 + React + TypeScript で構築したAWS EC2管理アプリです。Andro
         "ce:GetCostAndUsage"
       ],
       "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ecs:ListClusters",
+        "ecs:DescribeClusters",
+        "ecs:ListServices",
+        "ecs:DescribeServices",
+        "ecs:UpdateService",
+        "application-autoscaling:DescribeScalableTargets",
+        "application-autoscaling:RegisterScalableTarget"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "logs:DescribeLogGroups",
+        "logs:DescribeLogStreams",
+        "logs:GetLogEvents"
+      ],
+      "Resource": "*"
     }
   ]
 }

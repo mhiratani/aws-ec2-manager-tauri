@@ -27,7 +27,9 @@ aws-sdk-costexplorer = "1"
 aws-sdk-ecs = "1"
 aws-sdk-applicationautoscaling = "1"
 aws-sdk-sts = "1"
+aws-sdk-cloudwatchlogs = "1"
 chrono = "0.4"
 aws-smithy-runtime = { version = "1", features = ["tls-rustls"] }
 aws-smithy-runtime-api = "1"
+aws-smithy-types = "1"
 hyper-rustls = { version = "0.24", features = ["http2", "webpki-roots"] }

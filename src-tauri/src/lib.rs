@@ -5,6 +5,7 @@ use aws_sdk_costexplorer::Client as CeClient;
 use aws_sdk_ecs::Client as EcsClient;
 use aws_sdk_applicationautoscaling::Client as AasClient;
 use aws_sdk_applicationautoscaling::types::ServiceNamespace;
+use aws_sdk_cloudwatchlogs::Client as CwlClient;
 use aws_sdk_costexplorer::operation::get_cost_and_usage::GetCostAndUsageOutput;
 use aws_sdk_costexplorer::types::{
     DateInterval, Granularity, Group, GroupDefinition, GroupDefinitionType, ResultByTime,
@@ -12,8 +13,19 @@ use aws_sdk_costexplorer::types::{
 use aws_sdk_sts::Client as StsClient;
 use aws_smithy_runtime::client::http::hyper_014::HyperClientBuilder;
 use aws_smithy_runtime_api::client::http::SharedHttpClient;
+use aws_smithy_types::error::metadata::ProvideErrorMetadata;
 use serde::{Deserialize, Serialize};
 use chrono::{Datelike, Local};
+
+// ─── エラーフォーマットヘルパー ──────────────────────────────────────────────────
+
+/// AWS SDK エラーからコードとメッセージを抽出して人間が読みやすい文字列を返す
+fn fmt_aws_err<E: ProvideErrorMetadata + std::fmt::Debug>(label: &str, e: &E) -> String {
+    let code = e.code().unwrap_or("UnknownError");
+    let msg = e.message().unwrap_or("no message");
+    eprintln!("[ERROR] {}: {} - {} | debug: {:?}", label, code, msg, e);
+    format!("{}: {} - {}", label, code, msg)
+}
 
 // ─── データ型定義 ──────────────────────────────────────────────────────────────
 
@@ -77,6 +89,20 @@ pub struct EcsService {
     pub max_capacity: Option<i32>,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct CloudWatchLogGroup {
+    pub log_group_name: String,
+    pub stored_bytes: i64,
+    pub retention_in_days: Option<i32>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct CloudWatchLogEvent {
+    pub timestamp: i64,
+    pub message: String,
+    pub log_stream_name: String,
+}
+
 // ─── AWS クライアント構築 ────────────────────────────────────────────────────────
 
 fn create_http_client() -> SharedHttpClient {
@@ -123,7 +149,7 @@ async fn resolve_credentials(creds: &AwsCredentials) -> Result<Credentials, Stri
         .role_session_name("ec2-manager-session")
         .send()
         .await
-        .map_err(|e| format!("STS AssumeRole error: {}", e))?;
+        .map_err(|e| fmt_aws_err("STS AssumeRole", &e))?;
 
     let sts_creds = assume_resp
         .credentials()
@@ -173,6 +199,11 @@ async fn build_aas_client(creds: &AwsCredentials) -> Result<AasClient, String> {
     Ok(AasClient::new(&config))
 }
 
+async fn build_cwl_client(creds: &AwsCredentials) -> Result<CwlClient, String> {
+    let config = build_sdk_config(creds, &creds.region).await?;
+    Ok(CwlClient::new(&config))
+}
+
 // ─── コスト処理ヘルパー ─────────────────────────────────────────────────────────
 
 fn process_groups(
@@ -214,7 +245,7 @@ async fn list_instances(creds: AwsCredentials) -> Result<Vec<Ec2Instance>, Strin
         .describe_instances()
         .send()
         .await
-        .map_err(|e| format!("EC2 DescribeInstances error: {}", e))?;
+        .map_err(|e| fmt_aws_err("EC2 DescribeInstances", &e))?;
 
     let mut instances = Vec::new();
 
@@ -275,7 +306,7 @@ async fn start_instance(creds: AwsCredentials, instance_id: String) -> Result<St
         .instance_ids(&instance_id)
         .send()
         .await
-        .map_err(|e| format!("StartInstances error: {}", e))?;
+        .map_err(|e| fmt_aws_err(&format!("EC2 StartInstances ({})", instance_id), &e))?;
 
     Ok(format!("Instance {} start request sent.", instance_id))
 }
@@ -289,7 +320,7 @@ async fn stop_instance(creds: AwsCredentials, instance_id: String) -> Result<Str
         .instance_ids(&instance_id)
         .send()
         .await
-        .map_err(|e| format!("StopInstances error: {}", e))?;
+        .map_err(|e| fmt_aws_err(&format!("EC2 StopInstances ({})", instance_id), &e))?;
 
     Ok(format!("Instance {} stop request sent.", instance_id))
 }
@@ -330,7 +361,7 @@ async fn get_monthly_cost(creds: AwsCredentials) -> Result<MonthlyCostSummary, S
         .group_by(group_def)
         .send()
         .await
-        .map_err(|e| format!("GetCostAndUsage error: {}", e))?;
+        .map_err(|e| fmt_aws_err("CostExplorer GetCostAndUsage", &e))?;
 
     let mut by_service: Vec<CostEntry> = Vec::new();
     let mut total_amount = 0.0f64;
@@ -368,7 +399,7 @@ async fn list_ecs_clusters(creds: AwsCredentials) -> Result<Vec<EcsCluster>, Str
         .list_clusters()
         .send()
         .await
-        .map_err(|e| format!("ECS ListClusters error: {}", e))?;
+        .map_err(|e| fmt_aws_err("ECS ListClusters", &e))?;
 
     let cluster_arns: Vec<String> = list_resp.cluster_arns().to_vec();
     if cluster_arns.is_empty() {
@@ -384,7 +415,7 @@ async fn list_ecs_clusters(creds: AwsCredentials) -> Result<Vec<EcsCluster>, Str
     let desc_resp = describe_req
         .send()
         .await
-        .map_err(|e| format!("ECS DescribeClusters error: {}", e))?;
+        .map_err(|e| fmt_aws_err("ECS DescribeClusters", &e))?;
 
     let clusters: Vec<EcsCluster> = desc_resp
         .clusters()
@@ -416,7 +447,7 @@ async fn list_ecs_services(
         .cluster(&cluster_arn)
         .send()
         .await
-        .map_err(|e| format!("ECS ListServices error: {}", e))?;
+        .map_err(|e| fmt_aws_err(&format!("ECS ListServices (cluster={})", cluster_arn), &e))?;
 
     let service_arns: Vec<String> = list_resp.service_arns().to_vec();
     if service_arns.is_empty() {
@@ -433,7 +464,7 @@ async fn list_ecs_services(
         let desc_resp = desc_req
             .send()
             .await
-            .map_err(|e| format!("ECS DescribeServices error: {}", e))?;
+            .map_err(|e| fmt_aws_err(&format!("ECS DescribeServices (cluster={})", cluster_arn), &e))?;
         all_services.extend(desc_resp.services().to_vec());
     }
 
@@ -537,7 +568,7 @@ async fn update_ecs_service(
                 .max_capacity(max_capacity)
                 .send()
                 .await
-                .map_err(|e| format!("ApplicationAutoScaling RegisterScalableTarget error: {}", e))?;
+                .map_err(|e| fmt_aws_err(&format!("ApplicationAutoScaling RegisterScalableTarget ({})", resource_id), &e))?;
         }
     }
 
@@ -549,12 +580,108 @@ async fn update_ecs_service(
         .desired_count(desired_count)
         .send()
         .await
-        .map_err(|e| format!("ECS UpdateService error: {}", e))?;
+        .map_err(|e| fmt_aws_err(&format!("ECS UpdateService (service={}, cluster={})", service_name, cluster_arn), &e))?;
 
     Ok(format!(
         "Service {} updated: desiredCount={}, min={}, max={}",
         service_name, desired_count, min_capacity, max_capacity
     ))
+}
+
+// ─── Tauri コマンド (CloudWatch Logs) ─────────────────────────────────────────
+
+/// ECSサービス名に関連するロググループ一覧を取得する
+/// プレフィックス: /ecs/<service_name> でフィルタリング
+#[tauri::command]
+async fn list_ecs_log_groups(
+    creds: AwsCredentials,
+    service_name: String,
+) -> Result<Vec<CloudWatchLogGroup>, String> {
+    let client = build_cwl_client(&creds).await?;
+
+    // /ecs/<service_name> をプレフィックスにして検索
+    let prefix = format!("/ecs/{}", service_name);
+    let resp = client
+        .describe_log_groups()
+        .log_group_name_prefix(&prefix)
+        .limit(50)
+        .send()
+        .await
+        .map_err(|e| fmt_aws_err("CloudWatchLogs DescribeLogGroups", &e))?;
+
+    let groups: Vec<CloudWatchLogGroup> = resp
+        .log_groups()
+        .iter()
+        .map(|g| CloudWatchLogGroup {
+            log_group_name: g.log_group_name().unwrap_or("").to_string(),
+            stored_bytes: g.stored_bytes().unwrap_or(0),
+            retention_in_days: g.retention_in_days(),
+        })
+        .collect();
+
+    Ok(groups)
+}
+
+/// 指定ロググループの最新ログイベントを取得する
+/// 複数のログストリームから直近のイベントをまとめて返す
+#[tauri::command]
+async fn get_ecs_log_events(
+    creds: AwsCredentials,
+    log_group_name: String,
+    limit: i32,
+) -> Result<Vec<CloudWatchLogEvent>, String> {
+    let client = build_cwl_client(&creds).await?;
+
+    // 直近のログストリームを取得（最新順）
+    let streams_resp = client
+        .describe_log_streams()
+        .log_group_name(&log_group_name)
+        .order_by(aws_sdk_cloudwatchlogs::types::OrderBy::LastEventTime)
+        .descending(true)
+        .limit(5)
+        .send()
+        .await
+        .map_err(|e| fmt_aws_err("CloudWatchLogs DescribeLogStreams", &e))?;
+
+    let streams = streams_resp.log_streams();
+    if streams.is_empty() {
+        return Ok(vec![]);
+    }
+
+    let per_stream_limit = std::cmp::max(1, limit / streams.len() as i32);
+    let mut all_events: Vec<CloudWatchLogEvent> = Vec::new();
+
+    for stream in streams {
+        let stream_name = match stream.log_stream_name() {
+            Some(n) => n.to_string(),
+            None => continue,
+        };
+
+        let events_resp = client
+            .get_log_events()
+            .log_group_name(&log_group_name)
+            .log_stream_name(&stream_name)
+            .limit(per_stream_limit)
+            .start_from_head(false)
+            .send()
+            .await;
+
+        if let Ok(resp) = events_resp {
+            for ev in resp.events() {
+                all_events.push(CloudWatchLogEvent {
+                    timestamp: ev.timestamp().unwrap_or(0),
+                    message: ev.message().unwrap_or("").trim_end().to_string(),
+                    log_stream_name: stream_name.clone(),
+                });
+            }
+        }
+    }
+
+    // タイムスタンプ降順でソート
+    all_events.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+    all_events.truncate(limit as usize);
+
+    Ok(all_events)
 }
 
 // ─── エントリポイント ───────────────────────────────────────────────────────────
@@ -573,6 +700,8 @@ pub fn run() {
             list_ecs_clusters,
             list_ecs_services,
             update_ecs_service,
+            list_ecs_log_groups,
+            get_ecs_log_events,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

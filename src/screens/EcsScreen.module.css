@@ -474,3 +474,183 @@
 .dialogStopBtn:hover {
   background: #f87171;
 }
+
+/* ─── ログボタン ──────────────────────────────────────────── */
+
+.logBtn {
+  background: #1e2d3d;
+  border: 1px solid #2d3f50;
+  border-radius: 8px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.logBtn:hover {
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+.logBtnActive {
+  border-color: #38bdf8;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.08);
+}
+
+/* ─── ログパネル ──────────────────────────────────────────── */
+
+.logPanel {
+  border-top: 1px solid #2d3f50;
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ロググループ選択行 */
+.logGroupRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.logGroupLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+
+.logGroupSelect {
+  flex: 1;
+  min-width: 0;
+  background: #0f1923;
+  border: 1px solid #2d3f50;
+  border-radius: 6px;
+  color: #e2e8f0;
+  font-size: 12px;
+  padding: 5px 8px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.logGroupSelect:focus {
+  border-color: #38bdf8;
+}
+
+.logGroupLoading,
+.logGroupEmpty {
+  font-size: 12px;
+  color: #64748b;
+  font-style: italic;
+}
+
+.logRefreshBtn {
+  background: #1e2d3d;
+  border: 1px solid #2d3f50;
+  border-radius: 6px;
+  color: #94a3b8;
+  font-size: 15px;
+  line-height: 1;
+  padding: 4px 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.logRefreshBtn:hover:not(:disabled) {
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+.logRefreshBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ログイベント表示エリア */
+.logEventArea {
+  background: #080f17;
+  border: 1px solid #1e2d3d;
+  border-radius: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+  font-family: 'SFMono-Regular', Consolas, 'Courier New', monospace;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.logLoading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  color: #64748b;
+  font-size: 12px;
+  font-family: inherit;
+}
+
+.logSpinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #2d3f50;
+  border-top-color: #38bdf8;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+.logEmpty {
+  padding: 16px;
+  color: #64748b;
+  font-size: 12px;
+  text-align: center;
+}
+
+/* 1行のログイベント */
+.logEventRow {
+  display: grid;
+  grid-template-columns: 150px 180px 1fr;
+  gap: 8px;
+  padding: 4px 10px;
+  border-bottom: 1px solid #0f1923;
+  align-items: baseline;
+}
+
+.logEventRow:last-child {
+  border-bottom: none;
+}
+
+.logEventRow:hover {
+  background: rgba(56, 189, 248, 0.04);
+}
+
+.logTs {
+  color: #64748b;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-size: 10.5px;
+}
+
+.logStream {
+  color: #7dd3fc;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10.5px;
+}
+
+.logMsg {
+  color: #cbd5e1;
+  word-break: break-all;
+  white-space: pre-wrap;
+}

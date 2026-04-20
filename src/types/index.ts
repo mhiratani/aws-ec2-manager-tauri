@@ -57,6 +57,20 @@ export interface EcsService {
   max_capacity: number | null;  // Auto Scaling 最大値
 }
 
+// ─── CloudWatch Logs ──────────────────────────────────────────────────────────
+
+export interface CloudWatchLogGroup {
+  log_group_name: string;
+  stored_bytes: number;
+  retention_in_days: number | null;
+}
+
+export interface CloudWatchLogEvent {
+  timestamp: number;
+  message: string;
+  log_stream_name: string;
+}
+
 // ─── Cost ────────────────────────────────────────────────────────────────────
 
 export interface CostEntry {

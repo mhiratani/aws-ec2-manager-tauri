@@ -42,6 +42,7 @@ export function InstanceListScreen() {
       const data = await listInstances(credentials);
       setInstances(data);
     } catch (e) {
+      console.error('[InstanceList] fetchInstances error:', e);
       showToast('インスタンス取得失敗: ' + String(e), 'error');
     } finally {
       setIsLoading(false);
@@ -50,7 +51,7 @@ export function InstanceListScreen() {
 
   useEffect(() => {
     fetchInstances();
-  }, [fetchInstances]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAction = (inst: Ec2Instance, action: 'start' | 'stop') => {
     setConfirm({
@@ -75,6 +76,7 @@ export function InstanceListScreen() {
       // 少し待ってからリフレッシュ
       setTimeout(() => fetchInstances(), 2000);
     } catch (e) {
+      console.error('[InstanceList] executeAction error:', e);
       showToast('操作失敗: ' + String(e), 'error');
     } finally {
       setActionLoading(null);

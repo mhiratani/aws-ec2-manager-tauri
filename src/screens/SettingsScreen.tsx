@@ -311,14 +311,49 @@ export function SettingsScreen() {
         </>
       )}
 
-      <div className={styles.note}>
-        <p>クレデンシャルはデバイス内に暗号化して保存されます。</p>
-        <p>
-          必要な権限:{' '}
-          <code>ec2:Describe*</code>, <code>ec2:StartInstances</code>,{' '}
-          <code>ec2:StopInstances</code>, <code>ecs:*</code>,{' '}
-          <code>application-autoscaling:*</code>, <code>ce:GetCostAndUsage</code>
-        </p>
+      <div className={styles.permSection}>
+        <div className={styles.permTitle}> 必要な IAM 権限</div>
+        <div className={styles.permTable}>
+          <div className={styles.permRow}>
+            <span className={styles.permService}>EC2</span>
+            <span className={styles.permCodes}>
+              <code>ec2:DescribeInstances</code>
+              <code>ec2:StartInstances</code>
+              <code>ec2:StopInstances</code>
+            </span>
+          </div>
+          <div className={styles.permRow}>
+            <span className={styles.permService}>ECS</span>
+            <span className={styles.permCodes}>
+              <code>ecs:ListClusters</code>
+              <code>ecs:DescribeClusters</code>
+              <code>ecs:ListServices</code>
+              <code>ecs:DescribeServices</code>
+              <code>ecs:UpdateService</code>
+            </span>
+          </div>
+          <div className={styles.permRow}>
+            <span className={styles.permService}>Auto Scaling</span>
+            <span className={styles.permCodes}>
+              <code>application-autoscaling:DescribeScalableTargets</code>
+              <code>application-autoscaling:RegisterScalableTarget</code>
+            </span>
+          </div>
+          <div className={styles.permRow}>
+            <span className={styles.permService}>Cost Explorer</span>
+            <span className={styles.permCodes}>
+              <code>ce:GetCostAndUsage</code>
+            </span>
+          </div>
+          <div className={styles.permRow}>
+            <span className={styles.permService}>STS</span>
+            <span className={styles.permCodes}>
+              <code>sts:AssumeRole</code>
+              <span className={styles.permNote}>（スイッチロール使用時のみ）</span>
+            </span>
+          </div>
+        </div>
+        <p className={styles.permFooter}>クレデンシャルはデバイス内に暗号化して保存されます。</p>
       </div>
 
       {/* 削除確認ダイアログ */}

@@ -599,25 +599,43 @@ async fn list_ecs_log_groups(
 ) -> Result<Vec<CloudWatchLogGroup>, String> {
     let client = build_cwl_client(&creds).await?;
 
-    // /ecs/<service_name> をプレフィックスにして検索
-    let prefix = format!("/ecs/{}", service_name);
-    let resp = client
-        .describe_log_groups()
-        .log_group_name_prefix(&prefix)
-        .limit(50)
-        .send()
-        .await
-        .map_err(|e| fmt_aws_err("CloudWatchLogs DescribeLogGroups", &e))?;
+    // 複数プレフィックスで検索
+    // パターン1: /ecs/<service_name>
+    // パターン2: /aws/ecs/<service_name>
+    // パターン3: サービス名から "-ecs-" を除去したバリエーション（例: foo-ecs-bar → foo-bar）
+    let name_without_ecs = service_name.replace("-ecs-", "-");
+    let mut prefixes: Vec<String> = vec![
+        format!("/ecs/{}", service_name),
+        format!("/aws/ecs/{}", service_name),
+    ];
+    if name_without_ecs != service_name {
+        prefixes.push(format!("/ecs/{}", name_without_ecs));
+        prefixes.push(format!("/aws/ecs/{}", name_without_ecs));
+    }
 
-    let groups: Vec<CloudWatchLogGroup> = resp
-        .log_groups()
-        .iter()
-        .map(|g| CloudWatchLogGroup {
-            log_group_name: g.log_group_name().unwrap_or("").to_string(),
-            stored_bytes: g.stored_bytes().unwrap_or(0),
-            retention_in_days: g.retention_in_days(),
-        })
-        .collect();
+    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut groups: Vec<CloudWatchLogGroup> = Vec::new();
+
+    for prefix in &prefixes {
+        let resp = client
+            .describe_log_groups()
+            .log_group_name_prefix(prefix)
+            .limit(50)
+            .send()
+            .await
+            .map_err(|e| fmt_aws_err("CloudWatchLogs DescribeLogGroups", &e))?;
+
+        for g in resp.log_groups() {
+            let name = g.log_group_name().unwrap_or("").to_string();
+            if seen.insert(name.clone()) {
+                groups.push(CloudWatchLogGroup {
+                    log_group_name: name,
+                    stored_bytes: g.stored_bytes().unwrap_or(0),
+                    retention_in_days: g.retention_in_days(),
+                });
+            }
+        }
+    }
 
     Ok(groups)
 }
